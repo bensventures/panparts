@@ -3,6 +3,7 @@ import { Component } from 'react';
 import cn from 'classnames';
 
 import Handpan from './handpan';
+import PartitionLine from './partition-line';
 
 /**
  * lines [
@@ -81,10 +82,10 @@ export default class App extends Component {
         }
     }
 
-    handleDeleteLastTap = lineIndex => {
+    handleDeleteLastTap = () => {
         const linesCopy = structuredClone(this.state.lines);
         let currentLineIndex = this.state.currentLineIndex;
-        const currentLine = linesCopy[lineIndex || this.state.currentLineIndex];
+        const currentLine = linesCopy[this.state.currentLineIndex];
 
         currentLine.taps.pop();
 
@@ -121,7 +122,7 @@ export default class App extends Component {
                     </h1>
                     <button
                         type="button"
-                        onClick={() => this.setState({ lines: [[]], currentLineInde: 0 })}
+                        onClick={() => this.setState({ lines: [{...defaultLine}], currentLineInde: 0 })}
                     >
                         Clear
                     </button>
@@ -136,26 +137,10 @@ export default class App extends Component {
                     <div className="partition">
                         <ul className="lines-list">
                             {this.state.lines.map((line, index) => (
-                                <li key={`line-${index}`} className="line-item">
-                                    <ul className="taps-list">
-                                        {line.taps.map((taps, index) => (
-                                            <li key={`taps-${index}`}>
-                                                <span className="chord">
-                                                {taps.map((tap, index) => (
-                                                    <span className={cn('tap', tap.hand)} key={`tap-${index}`}>
-                                                        <span className="hand-value">
-                                                            {tap.hand.substring(0, 1)}
-                                                        </span>
-                                                            <span className="note-value">
-                                                            {tap.note}
-                                                        </span>
-                                                    </span>
-                                                ))}
-                                                </span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </li>
+                                <PartitionLine
+                                    key={`line-${index}`}
+                                    line={line}
+                                />
                             ))}
                         </ul>
                     </div>
