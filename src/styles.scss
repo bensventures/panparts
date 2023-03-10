@@ -38,6 +38,14 @@ body {
 .instrument {
     grid-column: 5 / span 2;
     grid-row-start: 1;
+    padding-bottom: 150px;
+    background: url('./assets/keyboard.svg') no-repeat bottom center;
+
+    .circle-shape {
+        fill: #dcdcdc;
+        stroke-width: 1px;
+        stroke: grey;
+    }
 }
 
 .partition {
