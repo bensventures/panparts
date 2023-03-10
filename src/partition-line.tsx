@@ -1,9 +1,12 @@
 
 import cn from 'classnames';
 
-export default function PartitionLine({ line }) {
+export default function PartitionLine({ line, isSelected, handleLineClicked }) {
     return (
-        <li className="line-item">
+        <li
+            className={cn('line-item', { 'is-selected': isSelected })}
+            onClick={handleLineClicked}
+        >
             <ul className="taps-list">
                 {line.taps.map((taps, index) => (
                     <li key={`taps-${index}`}>
@@ -22,6 +25,11 @@ export default function PartitionLine({ line }) {
                     </li>
                 ))}
             </ul>
+            {line.repetition > 1 &&
+            <span className="repetition-counter">
+                {line.repetition}
+            </span>
+            }
         </li>
     )
 }
