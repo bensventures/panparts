@@ -1,4 +1,5 @@
 
+// @ts-ignore
 import cn from 'classnames';
 
 export default function PartitionLine({ line, isSelected, handleLineClicked }) {
