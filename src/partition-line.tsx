@@ -1,4 +1,4 @@
-
+import React from 'react';
 // @ts-ignore
 import cn from 'classnames';
 
@@ -8,6 +8,11 @@ export default function PartitionLine({ line, isSelected, handleLineClicked }) {
             className={cn('line-item', { 'is-selected': isSelected })}
             onClick={handleLineClicked}
         >
+            {line.repetition > 1 &&
+            <span className="repetition-counter">
+                {line.repetition}
+            </span>
+            }
             <ul className="taps-list">
                 {line.taps.map((taps, index) => (
                     <li key={`taps-${index}`}>
@@ -26,11 +31,6 @@ export default function PartitionLine({ line, isSelected, handleLineClicked }) {
                     </li>
                 ))}
             </ul>
-            {line.repetition > 1 &&
-            <span className="repetition-counter">
-                {line.repetition}
-            </span>
-            }
         </li>
     )
 }
