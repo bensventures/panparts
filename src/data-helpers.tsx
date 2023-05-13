@@ -1,14 +1,21 @@
-export const defaultLine = {
+
+export const defaultLine: Line = {
     repetition: 1,
     taps: []
 }
 
-export const defaultGroup = {
+export const defaultGroup: Groups = {
     name: '',
-    repeat: 1,
+    repetition: 1,
     lines: [{
         ...defaultLine
     }],
+}
+
+export const storageKey = 'panpart';
+
+export function saveToStorage({ groups }) {
+    window.localStorage.setItem(storageKey, JSON.stringify(groups));
 }
 
 export function addNewLine({groups, currentLineIndex, currentGroupIndex}) {

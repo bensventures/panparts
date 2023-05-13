@@ -2,6 +2,7 @@ import React, {Component} from 'react';
 import cn from 'classnames';
 
 import {
+    storageKey,
     defaultGroup,
     addNewLine,
     addNoteToSelectedLine,
@@ -22,11 +23,10 @@ import PartitionLine from './partition-line';
  *      name: '',
  *      repeat: 1,
  *      lines: [
- *          { line
+ *          {
  *              repeat: 1,
- *              chords: [ chord
+ *              taps: [
  *                  {
- *                      tap
  *                      note,
  *                      hand
  *                  }
@@ -38,11 +38,8 @@ import PartitionLine from './partition-line';
  * @constructor
  */
 
-
-const storageKey = 'panpart';
-
 interface IState {
-    groups: Array<Object>
+    groups: Array<Group>
     songName: string
     currentGroupIndex: number
     currentLineIndex: number
@@ -71,6 +68,7 @@ export default class App extends Component<IState> {
         window.addEventListener('keyup', this.handleKeyUp);
 
         const storage = window.localStorage.getItem(storageKey);
+
         if (storage) {
             this.setState({
                 groups: JSON.parse(storage)
@@ -95,25 +93,25 @@ export default class App extends Component<IState> {
 
         if (e.code === 'Backspace' && e.target) {
             e.preventDefault();
-            this.handleDeleteLastTap();
+            this.setState(deleteLastNoteFromSelectedLine(this.state));
             return;
         }
 
         if (e.code === 'Enter') {
             e.preventDefault();
-            this.handleAddLine();
+            this.setState(addNewLine(this.state));
             return;
         }
 
         if (e.code === 'Space') {
             e.preventDefault();
-            this.handleAddGroup();
+            this.setState(addNewGroup(this.state));
             return;
         }
 
         if (e.code === 'KeyD') {
             e.preventDefault();
-            this.handleDuplicateLine();
+            this.setState(duplicateSelectedLine(this.state));
             return;
         }
 
@@ -122,11 +120,11 @@ export default class App extends Component<IState> {
 
             const direction = e.code === 'ArrowUp';
             if (e.metaKey) {
-                this.handleMove(direction);
+                this.setState(moveLine(this.state, direction));
             } else if (e.shiftKey) {
-                this.handleAddRemoveRepetition(direction);
+                this.setState(changeRepetitions(this.state, direction));
             } else {
-                this.handleChangeLine(direction);
+                this.setState(selectedNewLine(this.state, direction));
             }
             return;
         }
@@ -161,34 +159,6 @@ export default class App extends Component<IState> {
         if (target.tagName === 'path') {
             this.addNote({note, hand, addToPrevious});
         }
-    }
-
-    handleDeleteLastTap = () => {
-        this.setState(deleteLastNoteFromSelectedLine(this.state));
-    }
-
-    handleAddLine = () => {
-        this.setState(addNewLine(this.state));
-    }
-
-    handleAddGroup = () => {
-        this.setState(addNewGroup(this.state));
-    }
-
-    handleChangeLine = up => {
-        this.setState(selectedNewLine(this.state, up));
-    }
-
-    handleDuplicateLine = () => {
-        this.setState(duplicateSelectedLine(this.state));
-    }
-
-    handleAddRemoveRepetition = add => {
-        this.setState(changeRepetitions(this.state, add));
-    }
-
-    handleMove = up => {
-        this.setState(moveLine(this.state, up));
     }
 
     handleLineClicked = (groupIndex, lineIndex) => {

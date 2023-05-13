@@ -2,7 +2,7 @@ import React from 'react';
 // @ts-ignore
 import cn from 'classnames';
 
-export default function PartitionLine({ line, isSelected, handleLineClicked }) {
+export default function PartitionLine({ line, isSelected, handleLineClicked }): React.FC {
     return (
         <li
             className={cn('line-item', { 'is-selected': isSelected })}
