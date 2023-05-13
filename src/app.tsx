@@ -2,7 +2,15 @@ import React, {Component} from 'react';
 import cn from 'classnames';
 
 import {
-    addNoteToSelectedLine
+    defaultGroup,
+    addNewLine,
+    addNoteToSelectedLine,
+    deleteLastNoteFromSelectedLine,
+    addNewGroup,
+    selectedNewLine,
+    moveLine,
+    duplicateSelectedLine,
+    changeRepetitions
 } from './data-helpers';
 
 import Handpan from './handpan';
@@ -30,18 +38,6 @@ import PartitionLine from './partition-line';
  * @constructor
  */
 
-const defaultLine = {
-    repetition: 1,
-    taps: []
-}
-
-const defaultGroup = {
-    name: '',
-    repeat: 1,
-    lines: [{
-        ...defaultLine
-    }],
-}
 
 const storageKey = 'panpart';
 
@@ -168,173 +164,31 @@ export default class App extends Component<IState> {
     }
 
     handleDeleteLastTap = () => {
-        const groupsCopy = structuredClone(this.state.groups);
-        const currentGroup = groupsCopy[this.state.currentGroupIndex];
-        const linesCopy = currentGroup.lines;
-        let currentGroupIndex = this.state.currentGroupIndex;
-        let currentLineIndex = this.state.currentLineIndex;
-        const currentLine = linesCopy[this.state.currentLineIndex];
-
-        currentLine.taps.pop();
-
-        if (currentLine.taps.length === 0) {
-            if (linesCopy.length > 1 || groupsCopy.length > 1) {
-                linesCopy.splice(this.state.currentLineIndex, 1);
-                currentLineIndex = currentLineIndex - 1;
-            }
-
-            if (currentGroup.lines.length === 0 && groupsCopy.length > 1) {
-                const prevGroup = this.state.groups[this.state.currentGroupIndex - 1];
-                groupsCopy.splice(this.state.currentGroupIndex, 1);
-                currentGroupIndex = currentGroupIndex - 1;
-                currentLineIndex = prevGroup.lines.length - 1;
-            }
-        }
-
-        this.setState({
-            groups: groupsCopy,
-            currentLineIndex,
-            currentGroupIndex
-        });
+        this.setState(deleteLastNoteFromSelectedLine(this.state));
     }
 
     handleAddLine = () => {
-        const groupsCopy = structuredClone(this.state.groups);
-        const currentGroup = groupsCopy[this.state.currentGroupIndex];
-        const linesCopy = currentGroup.lines;
-
-        linesCopy.splice(this.state.currentLineIndex + 1, 0, {...defaultLine});
-
-        this.setState({
-            groups: groupsCopy,
-            currentLineIndex: this.state.currentLineIndex + 1
-        });
+        this.setState(addNewLine(this.state));
     }
 
     handleAddGroup = () => {
-        const groupsCopy = structuredClone(this.state.groups);
-
-        groupsCopy.splice(this.state.currentGroupIndex + 1, 0, {...defaultGroup});
-
-        this.setState({
-            groups: groupsCopy,
-            currentGroupIndex: this.state.currentGroupIndex + 1,
-            currentLineIndex: 0
-        });
+        this.setState(addNewGroup(this.state));
     }
 
     handleChangeLine = up => {
-        let newGroupIndex = this.state.currentGroupIndex;
-        let newLineIndex = this.state.currentLineIndex;
-        const currentGroup = this.state.groups[newGroupIndex];
-
-        if (up) {
-            newLineIndex -= 1;
-
-            if (newLineIndex < 0) {
-                const prevGroup = this.state.groups[this.state.currentGroupIndex - 1];
-
-                if (prevGroup) {
-                    newGroupIndex = this.state.currentGroupIndex - 1;
-                    newLineIndex = prevGroup.lines.length - 1;
-                } else {
-                    newLineIndex = 0;
-                }
-            }
-        } else {
-            newLineIndex += 1;
-
-            if (newLineIndex >= currentGroup.lines.length) {
-                const nextGroup = this.state.groups[this.state.currentGroupIndex + 1];
-
-                if (nextGroup) {
-                    newGroupIndex = this.state.currentGroupIndex + 1;
-                    newLineIndex = 0;
-                } else {
-                    newLineIndex = this.state.currentLineIndex;
-                }
-            }
-        }
-
-        this.setState({
-            currentGroupIndex: newGroupIndex,
-            currentLineIndex: newLineIndex
-        });
+        this.setState(selectedNewLine(this.state, up));
     }
 
     handleDuplicateLine = () => {
-        const groupsCopy = structuredClone(this.state.groups);
-        const currentGroup = groupsCopy[this.state.currentGroupIndex];
-        const linesCopy = currentGroup.lines;
-        const duplicateLine = structuredClone(linesCopy[this.state.currentLineIndex]);
-
-        linesCopy.splice(this.state.currentLineIndex, 0, duplicateLine);
-
-        this.setState({
-            groups: groupsCopy,
-            currentLineIndex: this.state.currentLineIndex + 1
-        });
+        this.setState(duplicateSelectedLine(this.state));
     }
 
     handleAddRemoveRepetition = add => {
-        const groupsCopy = structuredClone(this.state.groups);
-        const currentGroup = groupsCopy[this.state.currentGroupIndex];
-        const linesCopy = currentGroup.lines;
-        const currentLine = linesCopy[this.state.currentLineIndex];
-
-        currentLine.repetition = add ? currentLine.repetition + 1 : currentLine.repetition - 1;
-
-        if (currentLine.repetition < 1) {
-            currentLine.repetition = 1;
-        }
-
-        this.setState({
-            groups: groupsCopy,
-        });
+        this.setState(changeRepetitions(this.state, add));
     }
 
     handleMove = up => {
-        const groupsCopy = structuredClone(this.state.groups);
-        let currentGroup = groupsCopy[this.state.currentGroupIndex];
-        const currentLine = currentGroup.lines[this.state.currentLineIndex];
-        let toGroup = currentGroup;
-        let toGroupIndex = this.state.currentGroupIndex;
-        let toIndex = this.state.currentLineIndex + (up ? -1 : 1);
-
-        if (up) {
-            if (toIndex < 0) {
-                toGroup = groupsCopy[this.state.currentGroupIndex - 1];
-
-                if (toGroup) {
-                    toGroupIndex = toGroupIndex - 1;
-                    toIndex = toGroup.lines.length;
-                } else {
-                    return;
-                }
-            }
-        } else {
-            if (toIndex > currentGroup.lines.length - 1) {
-                toGroup = groupsCopy[this.state.currentGroupIndex + 1];
-
-                if (toGroup) {
-                    toGroupIndex = toGroupIndex + 1;
-                    toIndex = 0;
-                } else {
-                    return;
-                }
-            }
-        }
-
-        // Remove current line from where it is
-        currentGroup.lines.splice(this.state.currentLineIndex, 1);
-        // Append line at the position we want and selected it
-        toGroup.lines.splice(toIndex, 0, currentLine);
-
-        this.setState({
-            groups: groupsCopy,
-            currentGroupIndex: toGroupIndex,
-            currentLineIndex: toIndex
-        });
+        this.setState(moveLine(this.state, up));
     }
 
     handleLineClicked = (groupIndex, lineIndex) => {
@@ -356,11 +210,7 @@ export default class App extends Component<IState> {
     }
 
     addNote(newNote) {
-        const newGroups = addNoteToSelectedLine(this.state, newNote)
-
-        this.setState({
-            groups: newGroups
-        });
+        this.setState(addNoteToSelectedLine(this.state, newNote));
     }
 
     render() {
