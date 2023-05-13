@@ -1,4 +1,5 @@
 import React, {Component} from 'react';
+// @ts-ignore
 import cn from 'classnames';
 
 import {
@@ -55,7 +56,7 @@ export default class App extends Component<IState> {
 
         this.state = {
             songName: 'new song',
-            groups: [defaultGroup],
+            groups: [{...defaultGroup}],
             currentGroupIndex: 0,
             currentLineIndex: 0
         }
@@ -67,12 +68,19 @@ export default class App extends Component<IState> {
         window.addEventListener('keydown', this.handleKeyDown);
         window.addEventListener('keyup', this.handleKeyUp);
 
-        const storage = window.localStorage.getItem(storageKey);
+        let storage;
+        const url = window.location.href;
+
+        if (url.includes('/song/')) {
+            storage = atob(url.split('/song/')[1]);
+        } else {
+            storage = window.localStorage.getItem(storageKey);
+        }
 
         if (storage) {
             this.setState({
-                groups: JSON.parse(storage)
-            })
+                ...JSON.parse(storage)
+            });
         }
     }
 
@@ -82,11 +90,30 @@ export default class App extends Component<IState> {
     }
 
     handleKeyUp = () => {
-        window.localStorage.setItem(storageKey, JSON.stringify(this.state.groups));
+        window.localStorage.setItem(storageKey, JSON.stringify({
+            songName: this.state.songName,
+            groups: this.state.groups
+        }));
         this.pressedKeysCodes = [];
     }
 
-    handleKeyDown = (e) => {
+    handleKeyDown = e => {
+        if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+            e.preventDefault();
+
+            const direction = e.code === 'ArrowUp';
+
+            if (e.metaKey) {
+                this.setState(moveLine(this.state, direction));
+            } else if (e.shiftKey) {
+                const isGroup = e.target.tagName === 'INPUT';
+                this.setState(changeRepetitions(this.state, direction, isGroup));
+            } else {
+                this.setState(selectedNewLine(this.state, direction));
+            }
+            return;
+        }
+
         if (e.target.tagName === 'INPUT') {
             return;
         }
@@ -112,20 +139,6 @@ export default class App extends Component<IState> {
         if (e.code === 'KeyD') {
             e.preventDefault();
             this.setState(duplicateSelectedLine(this.state));
-            return;
-        }
-
-        if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
-            e.preventDefault();
-
-            const direction = e.code === 'ArrowUp';
-            if (e.metaKey) {
-                this.setState(moveLine(this.state, direction));
-            } else if (e.shiftKey) {
-                this.setState(changeRepetitions(this.state, direction));
-            } else {
-                this.setState(selectedNewLine(this.state, direction));
-            }
             return;
         }
 
@@ -168,7 +181,18 @@ export default class App extends Component<IState> {
         })
     }
 
+    handleSaveLink = () => {
+        const song = btoa(JSON.stringify({
+            songName: this.state.songName,
+            groups: this.state.groups
+        }));
+        const link = `${window.location.origin}/song/${song}`;
+
+        navigator.clipboard.writeText(link);
+    }
+
     handleGroupNameChanged = (groupIndex, e) => {
+        // @ts-ignore
         const groupsCopy = structuredClone(this.state.groups);
         const currentGroup = groupsCopy[groupIndex];
 
@@ -186,23 +210,6 @@ export default class App extends Component<IState> {
     render() {
         return (
             <div>
-                <header>
-                    <input
-                        type="text"
-                        value={this.state.songName}
-                        onChange={e => this.setState({songName: e.target.value})}
-                    />
-                    <button
-                        type="button"
-                        onClick={() => this.setState({
-                            groups: [defaultGroup],
-                            currentGroupIndex: 0,
-                            currentLineIndex: 0
-                        })}
-                    >
-                        Clear
-                    </button>
-                </header>
                 <div className="scene">
                     <div className="instrument">
                         <Handpan
@@ -211,19 +218,53 @@ export default class App extends Component<IState> {
                     </div>
 
                     <div className="partition">
+                        <header>
+                            <input
+                                type="text"
+                                placeholder="Song name"
+                                value={this.state.songName}
+                                onChange={e => this.setState({songName: e.target.value})}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => this.setState({
+                                    songName: '',
+                                    groups: [defaultGroup],
+                                    currentGroupIndex: 0,
+                                    currentLineIndex: 0
+                                })}
+                            >
+                                Clear
+                            </button>
+                            <button
+                                type="button"
+                                onClick={this.handleSaveLink}
+                            >
+                                copy link
+                            </button>
+                        </header>
+
                         <ul className="groups-list">
                             {this.state.groups.map((group, gIndex) => (
                                 <li
                                     key={`group-${gIndex}`}
                                     className={cn('group-item', {
-                                        'is-selected': gIndex === this.state.currentGroupIndex
+                                        'is-selected': gIndex === this.state.currentGroupIndex,
+                                        'is-sub-group': group.name.length === 0
                                     })}
                                 >
-                                    <input
-                                        type="text"
-                                        value={group.name}
-                                        onChange={e => this.handleGroupNameChanged(gIndex, e)}
-                                    />
+                                    <div className="group-header">
+                                        <span className="repetition-counter">
+                                            {group.repetition > 1 && `x${group.repetition}`}
+                                        </span>
+                                        <input
+                                            className="group-name"
+                                            type="text"
+                                            placeholder="Group name"
+                                            value={group.name}
+                                            onChange={e => this.handleGroupNameChanged(gIndex, e)}
+                                        />
+                                    </div>
                                     <ul className="lines-list">
                                         {group.lines.map((line, index) => (
                                             <PartitionLine

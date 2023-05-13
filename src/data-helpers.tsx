@@ -195,16 +195,16 @@ export function duplicateSelectedLine({ groups, currentGroupIndex, currentLineIn
     };
 }
 
-export function changeRepetitions({ groups, currentGroupIndex, currentLineIndex }, add) {
+export function changeRepetitions({ groups, currentGroupIndex, currentLineIndex }, add, isGroup) {
     const groupsCopy = structuredClone(groups);
     const currentGroup = groupsCopy[currentGroupIndex];
     const linesCopy = currentGroup.lines;
-    const currentLine = linesCopy[currentLineIndex];
+    const selectedElement = isGroup ? currentGroup : linesCopy[currentLineIndex];
 
-    currentLine.repetition = add ? currentLine.repetition + 1 : currentLine.repetition - 1;
+    selectedElement.repetition = add ? selectedElement.repetition + 1 : selectedElement.repetition - 1;
 
-    if (currentLine.repetition < 1) {
-        currentLine.repetition = 1;
+    if (selectedElement.repetition < 1) {
+        selectedElement.repetition = 1;
     }
 
     return {

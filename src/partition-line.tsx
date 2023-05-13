@@ -8,11 +8,9 @@ export default function PartitionLine({ line, isSelected, handleLineClicked }): 
             className={cn('line-item', { 'is-selected': isSelected })}
             onClick={handleLineClicked}
         >
-            {line.repetition > 1 &&
             <span className="repetition-counter">
-                {line.repetition}
+                {line.repetition > 1 && `x${line.repetition}`}
             </span>
-            }
             <ul className="taps-list">
                 {line.taps.map((taps, index) => (
                     <li key={`taps-${index}`}>
