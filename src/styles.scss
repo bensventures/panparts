@@ -52,6 +52,15 @@ body {
     grid-row-start: 1;
 }
 
+.groups-list {
+    padding: 0;
+    list-style: none;
+}
+
+.group-item.is-selected {
+    border-left: 1px solid red;
+}
+
 .lines-list {
     list-style: none;
     padding: 0;
@@ -97,7 +106,7 @@ body {
         }
 
         .tap {
-            font-size: 2rem;
+            font-size: 1.3rem;
             font-weight: 600;
             display: block;
 

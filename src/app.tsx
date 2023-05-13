@@ -1,6 +1,9 @@
-
-import React, { Component } from 'react';
+import React, {Component} from 'react';
 import cn from 'classnames';
+
+import {
+    addNoteToSelectedLine
+} from './data-helpers';
 
 import Handpan from './handpan';
 import PartitionLine from './partition-line';
@@ -44,6 +47,7 @@ const storageKey = 'panpart';
 
 interface IState {
     groups: Array<Object>
+    songName: string
     currentGroupIndex: number
     currentLineIndex: number
 }
@@ -57,6 +61,7 @@ export default class App extends Component<IState> {
         super(props);
 
         this.state = {
+            songName: 'new song',
             groups: [defaultGroup],
             currentGroupIndex: 0,
             currentLineIndex: 0
@@ -88,6 +93,10 @@ export default class App extends Component<IState> {
     }
 
     handleKeyDown = (e) => {
+        if (e.target.tagName === 'INPUT') {
+            return;
+        }
+
         if (e.code === 'Backspace' && e.target) {
             e.preventDefault();
             this.handleDeleteLastTap();
@@ -144,17 +153,17 @@ export default class App extends Component<IState> {
         const note = e.key;
         const addToPrevious = e.ctrlKey;
         const hand = this.pressedKeysCodes.includes('ArrowLeft') ? 'left' : 'right';
-        this.addNote({ note, hand, addToPrevious });
+        this.addNote({note, hand, addToPrevious});
     }
 
     handleNoteClick = e => {
-        const { target } = e;
+        const {target} = e;
         const note = target.dataset.note;
         const hand = e.metaKey ? 'right' : 'left';
         const addToPrevious = e.ctrlKey;
 
         if (target.tagName === 'path') {
-            this.addNote({ note, hand, addToPrevious });
+            this.addNote({note, hand, addToPrevious});
         }
     }
 
@@ -162,19 +171,30 @@ export default class App extends Component<IState> {
         const groupsCopy = structuredClone(this.state.groups);
         const currentGroup = groupsCopy[this.state.currentGroupIndex];
         const linesCopy = currentGroup.lines;
+        let currentGroupIndex = this.state.currentGroupIndex;
         let currentLineIndex = this.state.currentLineIndex;
         const currentLine = linesCopy[this.state.currentLineIndex];
 
         currentLine.taps.pop();
 
-        if (currentLine.taps.length === 0 && linesCopy.length > 1) {
-            linesCopy.splice(this.state.currentLineIndex, 1);
-            currentLineIndex = currentLineIndex-1;
+        if (currentLine.taps.length === 0) {
+            if (linesCopy.length > 1 || groupsCopy.length > 1) {
+                linesCopy.splice(this.state.currentLineIndex, 1);
+                currentLineIndex = currentLineIndex - 1;
+            }
+
+            if (currentGroup.lines.length === 0 && groupsCopy.length > 1) {
+                const prevGroup = this.state.groups[this.state.currentGroupIndex - 1];
+                groupsCopy.splice(this.state.currentGroupIndex, 1);
+                currentGroupIndex = currentGroupIndex - 1;
+                currentLineIndex = prevGroup.lines.length - 1;
+            }
         }
 
         this.setState({
             groups: groupsCopy,
-            currentLineIndex
+            currentLineIndex,
+            currentGroupIndex
         });
     }
 
@@ -204,15 +224,42 @@ export default class App extends Component<IState> {
     }
 
     handleChangeLine = up => {
-        const currentLineIndex = this.state.currentLineIndex;
-        const newLineIndex = currentLineIndex + (up ? -1 : 1);
-        const currentGroup = this.state.groups[this.state.currentGroupIndex];
+        let newGroupIndex = this.state.currentGroupIndex;
+        let newLineIndex = this.state.currentLineIndex;
+        const currentGroup = this.state.groups[newGroupIndex];
 
-        if (newLineIndex >= 0 && newLineIndex < currentGroup.lines.length) {
-            this.setState({
-                currentLineIndex: newLineIndex
-            });
+        if (up) {
+            newLineIndex -= 1;
+
+            if (newLineIndex < 0) {
+                const prevGroup = this.state.groups[this.state.currentGroupIndex - 1];
+
+                if (prevGroup) {
+                    newGroupIndex = this.state.currentGroupIndex - 1;
+                    newLineIndex = prevGroup.lines.length - 1;
+                } else {
+                    newLineIndex = 0;
+                }
+            }
+        } else {
+            newLineIndex += 1;
+
+            if (newLineIndex >= currentGroup.lines.length) {
+                const nextGroup = this.state.groups[this.state.currentGroupIndex + 1];
+
+                if (nextGroup) {
+                    newGroupIndex = this.state.currentGroupIndex + 1;
+                    newLineIndex = 0;
+                } else {
+                    newLineIndex = this.state.currentLineIndex;
+                }
+            }
         }
+
+        this.setState({
+            currentGroupIndex: newGroupIndex,
+            currentLineIndex: newLineIndex
+        });
     }
 
     handleDuplicateLine = () => {
@@ -248,19 +295,45 @@ export default class App extends Component<IState> {
 
     handleMove = up => {
         const groupsCopy = structuredClone(this.state.groups);
-        const currentGroup = groupsCopy[this.state.currentGroupIndex];
-        const linesCopy = currentGroup.lines;
-        const currentLine = linesCopy[this.state.currentLineIndex];
-        const toIndex = this.state.currentLineIndex + (up ? -1 : 1);
+        let currentGroup = groupsCopy[this.state.currentGroupIndex];
+        const currentLine = currentGroup.lines[this.state.currentLineIndex];
+        let toGroup = currentGroup;
+        let toGroupIndex = this.state.currentGroupIndex;
+        let toIndex = this.state.currentLineIndex + (up ? -1 : 1);
 
-        if (toIndex >= 0 && linesCopy[toIndex]) {
-            linesCopy.splice(this.state.currentLineIndex, 1);
-            linesCopy.splice(toIndex, 0, currentLine);
+        if (up) {
+            if (toIndex < 0) {
+                toGroup = groupsCopy[this.state.currentGroupIndex - 1];
+
+                if (toGroup) {
+                    toGroupIndex = toGroupIndex - 1;
+                    toIndex = toGroup.lines.length;
+                } else {
+                    return;
+                }
+            }
+        } else {
+            if (toIndex > currentGroup.lines.length - 1) {
+                toGroup = groupsCopy[this.state.currentGroupIndex + 1];
+
+                if (toGroup) {
+                    toGroupIndex = toGroupIndex + 1;
+                    toIndex = 0;
+                } else {
+                    return;
+                }
+            }
         }
+
+        // Remove current line from where it is
+        currentGroup.lines.splice(this.state.currentLineIndex, 1);
+        // Append line at the position we want and selected it
+        toGroup.lines.splice(toIndex, 0, currentLine);
 
         this.setState({
             groups: groupsCopy,
-            currentLineIndex: linesCopy[toIndex] ? toIndex : this.state.currentLineIndex
+            currentGroupIndex: toGroupIndex,
+            currentLineIndex: toIndex
         });
     }
 
@@ -271,24 +344,22 @@ export default class App extends Component<IState> {
         })
     }
 
-    addNote({ note, hand, addToPrevious }) {
+    handleGroupNameChanged = (groupIndex, e) => {
         const groupsCopy = structuredClone(this.state.groups);
-        const currentGroup = groupsCopy[this.state.currentGroupIndex];
-        const linesCopy = currentGroup.lines;
-        const currentLine = linesCopy[this.state.currentLineIndex];
-        const newTap = {
-            note,
-            hand
-        };
+        const currentGroup = groupsCopy[groupIndex];
 
-        if (addToPrevious) {
-            currentLine.taps[currentLine.taps.length-1].push(newTap);
-        } else {
-            currentLine.taps.push([newTap]);
-        }
+        currentGroup.name = e.target.value;
 
         this.setState({
             groups: groupsCopy
+        })
+    }
+
+    addNote(newNote) {
+        const newGroups = addNoteToSelectedLine(this.state, newNote)
+
+        this.setState({
+            groups: newGroups
         });
     }
 
@@ -296,9 +367,11 @@ export default class App extends Component<IState> {
         return (
             <div>
                 <header>
-                    <h1 contentEditable={true}>
-                        New song
-                    </h1>
+                    <input
+                        type="text"
+                        value={this.state.songName}
+                        onChange={e => this.setState({songName: e.target.value})}
+                    />
                     <button
                         type="button"
                         onClick={() => this.setState({
@@ -326,18 +399,20 @@ export default class App extends Component<IState> {
                                         'is-selected': gIndex === this.state.currentGroupIndex
                                     })}
                                 >
-                                    <h2>
-                                        Group {gIndex}
-                                    </h2>
+                                    <input
+                                        type="text"
+                                        value={group.name}
+                                        onChange={e => this.handleGroupNameChanged(gIndex, e)}
+                                    />
                                     <ul className="lines-list">
-                                    {group.lines.map((line, index) => (
-                                        <PartitionLine
-                                            key={`line-${index}`}
-                                            line={line}
-                                            handleLineClicked={() => this.handleLineClicked(gIndex, index)}
-                                            isSelected={index === this.state.currentLineIndex}
-                                        />
-                                    ))}
+                                        {group.lines.map((line, index) => (
+                                            <PartitionLine
+                                                key={`line-${index}`}
+                                                line={line}
+                                                handleLineClicked={() => this.handleLineClicked(gIndex, index)}
+                                                isSelected={index === this.state.currentLineIndex}
+                                            />
+                                        ))}
                                     </ul>
                                 </li>
                             ))}
