@@ -69,10 +69,10 @@ export default class App extends Component<IState> {
         window.addEventListener('keyup', this.handleKeyUp);
 
         let storage;
-        const url = window.location.href;
+        const query = window.location.search;
 
-        if (url.includes('/song/')) {
-            storage = atob(url.split('/song/')[1]);
+        if (query.includes('song=')) {
+            storage = atob(query.split('song=')[1]);
         } else {
             storage = window.localStorage.getItem(storageKey);
         }
@@ -186,7 +186,7 @@ export default class App extends Component<IState> {
             songName: this.state.songName,
             groups: this.state.groups
         }));
-        const link = `${window.location.origin}/song/${song}`;
+        const link = `${window.location.origin}?song=${song}`;
 
         navigator.clipboard.writeText(link);
     }
